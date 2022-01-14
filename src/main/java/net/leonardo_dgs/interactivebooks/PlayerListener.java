@@ -5,6 +5,7 @@ import net.leonardo_dgs.interactivebooks.util.BooksUtils;
 import net.leonardo_dgs.interactivebooks.util.MinecraftVersion;
 import org.bukkit.Bukkit;
 import org.bukkit.Material;
+import org.bukkit.entity.Player;
 import org.bukkit.event.Event;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.EventPriority;
@@ -24,28 +25,35 @@ public final class PlayerListener implements Listener {
     public void onPlayerJoin(PlayerJoinEvent event) {
         String openBookId;
         List<String> booksToGiveIds;
-        if (event.getPlayer().hasPlayedBefore()) {
-            openBookId = ConfigManager.getConfig().getString("open_book_on_join");
-            booksToGiveIds = ConfigManager.getConfig().getStringList("books_on_join");
-        } else {
-            openBookId = ConfigManager.getConfig().getString("open_book_on_first_join");
-            booksToGiveIds = ConfigManager.getConfig().getStringList("books_on_first_join");
-        }
-        if (openBookId != null && !openBookId.equals("")) {
-            IBook book = InteractiveBooks.getBook(openBookId);
-            if (book != null) {
-                if (MC_AFTER_1_14)
-                    book.open(event.getPlayer());
-                else
-                    Bukkit.getScheduler().runTask(InteractiveBooks.getInstance(), () -> book.open(event.getPlayer()));
+        Player player = event.getPlayer();
+
+        if (!player.hasPermission("interactivebooks.auto-open.bypass")) {
+
+            if (player.hasPlayedBefore()) {
+                openBookId = ConfigManager.getConfig().getString("open_book_on_join");
+                booksToGiveIds = ConfigManager.getConfig().getStringList("books_on_join");
+            } else {
+                openBookId = ConfigManager.getConfig().getString("open_book_on_first_join");
+                booksToGiveIds = ConfigManager.getConfig().getStringList("books_on_first_join");
             }
+            if (openBookId != null && !openBookId.equals("")) {
+                IBook book = InteractiveBooks.getBook(openBookId);
+                if (book != null) {
+                    if (MC_AFTER_1_14)
+                        book.open(player);
+                    else
+                        Bukkit.getScheduler().runTask(InteractiveBooks.getInstance(), () -> book.open(player));
+                }
+            }
+
+            booksToGiveIds.forEach(id -> {
+                IBook book = InteractiveBooks.getBook(id);
+                if (book != null)
+                    player.getInventory().addItem(book.getItem(player));
+            });
+
         }
 
-        booksToGiveIds.forEach(id -> {
-            IBook book = InteractiveBooks.getBook(id);
-            if (book != null)
-                event.getPlayer().getInventory().addItem(book.getItem(event.getPlayer()));
-        });
     }
 
     @EventHandler(priority = EventPriority.HIGHEST)
